@@ -1,0 +1,106 @@
+# ==============================================================
+#   Configuration file for Multi-domain LoRA + Histoformer
+#   Author: Ling Yuxuan
+#   Date: 2025-11
+# ==============================================================
+
+# --------------------------------------------------------------
+# 1. Model Architecture
+# --------------------------------------------------------------
+network_g:
+  type: Histoformer
+  inp_channels: 3
+  out_channels: 3
+  dim: 36                    # <== 确保 hidden_features*2 = 192 可被4整除，避免 PixelShuffle 报错
+  num_blocks: [4,4,6,8]      # 每个 encoder 层的块数
+  num_refinement_blocks: 4   # 解码端 refinement 模块数
+  heads: [1,2,4,8]           # 多头 self-attention 的 head 数
+  ffn_expansion_factor: 2.667
+  bias: False
+  LayerNorm_type: WithBias
+  dual_pixel_task: False
+
+# --------------------------------------------------------------
+# 2. Data Settings (for training LoRA)
+# --------------------------------------------------------------
+datasets:
+  train:
+    name: Rain
+    dataroot_gt: data/rain/train/gt
+    dataroot_lq: data/rain/train/lq
+    io_backend:
+      type: disk
+  val:
+    name: RainVal
+    dataroot_gt: data/rain/val/gt
+    dataroot_lq: data/rain/val/lq
+    io_backend:
+      type: disk
+
+# --------------------------------------------------------------
+# 3. Training Options
+# --------------------------------------------------------------
+train:
+  total_epochs: 200           # 总训练轮数
+  batch_size_per_gpu: 4
+  optim:
+    type: Adam
+    lr: !!float 1e-4
+    betas: [0.9, 0.999]
+  scheduler:
+    type: CosineAnnealingLR
+    T_max: 200
+    eta_min: !!float 1e-6
+  loss:
+    type: L1Loss
+    loss_weight: 1.0
+
+# --------------------------------------------------------------
+# 4. Validation
+# --------------------------------------------------------------
+val:
+  val_freq: 500
+  save_img: True
+  metrics:
+    psnr:
+      type: calculate_psnr
+    ssim:
+      type: calculate_ssim
+
+# --------------------------------------------------------------
+# 5. Paths and Saving
+# --------------------------------------------------------------
+path:
+  pretrain_network_g: pretrained_models/histoformer_base.pth
+  resume_state: ~
+  strict_load_g: True
+
+# --------------------------------------------------------------
+# 6. Multi-domain LoRA settings (custom for LoRA adapters)
+# --------------------------------------------------------------
+lora:
+  rank: 8
+  alpha: 8.0
+  domains: ["rain", "snow", "fog", "fog"]
+  enable_patch_lora: False   # <== 是否在 patch_embed.proj 上打 LoRA（默认关）
+
+# --------------------------------------------------------------
+# 7. Prototype Extraction (for DINOv2 weighting)
+# --------------------------------------------------------------
+prototype:
+  encoder: vit_base_patch14_dinov2.lvd142m
+  prototype_path: weights/prototypes/dinov2_vitb14.pt
+  max_images_per_domain: 300
+  data_root: data
+  subpath: train/lq
+
+# --------------------------------------------------------------
+# 8. Logging
+# --------------------------------------------------------------
+logger:
+  print_freq: 50
+  save_checkpoint_freq: 1000
+  use_tb_logger: True
+  wandb:
+    project: Histoformer_MoL
+    resume_id: ~

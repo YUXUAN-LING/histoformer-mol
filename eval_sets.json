@@ -1,0 +1,108 @@
+[
+  {
+    "name": "haze",
+    "pair_list": "data/txt_lists/val_list_haze.txt",
+    "data_root": ".",
+    "true_domain": "haze"
+  },
+  {
+    "name": "haze1",
+    "pair_list": "data/txt_lists/val_list_haze1.txt",
+    "data_root": ".",
+    "true_domain": "haze1"
+  },
+  {
+    "name": "haze2",
+    "pair_list": "data/txt_lists/val_list_haze2.txt",
+    "data_root": ".",
+    "true_domain": "haze2"
+  },
+  {
+    "name": "haze_rain",
+    "pair_list": "data/txt_lists/val_list_haze_rain.txt",
+    "data_root": ".",
+    "true_domain": "haze_rain",
+    "true_domains": [
+      "haze2",
+      "rain3"
+    ]
+  },
+  {
+    "name": "haze_snow",
+    "pair_list": "data/txt_lists/val_list_haze_snow.txt",
+    "data_root": ".",
+    "true_domain": "haze_snow",
+    "true_domains": [
+      "haze2",
+      "snow1"
+    ]
+  },
+  {
+    "name": "low",
+    "pair_list": "data/txt_lists/val_list_low.txt",
+    "data_root": ".",
+    "true_domain": "low"
+  },
+  {
+    "name": "low1",
+    "pair_list": "data/txt_lists/val_list_low1.txt",
+    "data_root": ".",
+    "true_domain": "low1"
+  },
+  {
+    "name": "low_rain",
+    "pair_list": "data/txt_lists/val_list_low_rain.txt",
+    "data_root": ".",
+    "true_domain": "low_rain",
+    "true_domains": [
+      "low1",
+      "rain3"
+    ]
+  },
+  {
+    "name": "low_snow",
+    "pair_list": "data/txt_lists/val_list_low_snow.txt",
+    "data_root": ".",
+    "true_domain": "low_snow",
+    "true_domains": [
+      "low1",
+      "snow1"
+    ]
+  },
+  {
+    "name": "rain",
+    "pair_list": "data/txt_lists/val_list_rain.txt",
+    "data_root": ".",
+    "true_domain": "rain"
+  },
+  {
+    "name": "rain2",
+    "pair_list": "data/txt_lists/val_list_rain2.txt",
+    "data_root": ".",
+    "true_domain": "rain2"
+  },
+  {
+    "name": "rain3",
+    "pair_list": "data/txt_lists/val_list_rain3.txt",
+    "data_root": ".",
+    "true_domain": "rain3"
+  },
+  {
+    "name": "rainy",
+    "pair_list": "data/txt_lists/val_list_rainy.txt",
+    "data_root": ".",
+    "true_domain": "rainy"
+  },
+  {
+    "name": "snow",
+    "pair_list": "data/txt_lists/val_list_snow.txt",
+    "data_root": ".",
+    "true_domain": "snow"
+  },
+  {
+    "name": "snow1",
+    "pair_list": "data/txt_lists/val_list_snow1.txt",
+    "data_root": ".",
+    "true_domain": "snow1"
+  }
+]
