@@ -47,13 +47,21 @@ class RetrievalOrchestrator:
         topk: int,
         temperature: Optional[float] = None,
         return_raw_scores: bool = False,
+        norm_topk_domains: int = 0,
+        include_domains: Optional[List[str]] = None,
     ) -> RetrievalResult:
         """
         Returns:
           RetrievalResult.picks: [(domain, weight)] softmaxed over topk (sorted desc)
           RetrievalResult.raw_scores: [(domain, score)] optional full list
         """
-        picks = self._orch.select_topk(img_emb, top_k=topk, temperature=temperature)
+        picks = self._orch.select_topk(
+            img_emb,
+            top_k=topk,
+            temperature=temperature,
+            norm_topk_domains=norm_topk_domains,
+            include_domains=include_domains,
+        )
 
         raw_scores = None
         if return_raw_scores:

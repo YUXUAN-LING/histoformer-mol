@@ -1,7 +1,7 @@
 # lora_adapters/retrieval/domain_orchestrator.py
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 import glob, numpy as np, torch
 
 
@@ -97,11 +97,40 @@ class DomainOrchestrator:
         diff = a - b
         return float(np.sqrt(np.sum(diff * diff)))
 
+    def score_domains(self, img_emb: np.ndarray) -> List[Tuple[str, float]]:
+        """
+        Return domain-level raw scores (unnormalized), sorted descending.
+
+        - cosine: per-domain score = max prototype cosine similarity
+        - euclidean/l2: per-domain score = max proximity, proximity=1/(dist+eps)
+        """
+        metric = self.sim_metric
+        out: List[Tuple[str, float]] = []
+
+        if metric == 'cosine':
+            for d, dom in self.domains.items():
+                protos = dom.prototypes
+                sims = [self.cosine(img_emb, protos[j]) for j in range(protos.shape[0])]
+                out.append((d, float(max(sims) if sims else -1e9)))
+        elif metric in ('euclidean', 'l2'):
+            for d, dom in self.domains.items():
+                protos = dom.prototypes
+                dists = [self.l2(img_emb, protos[j]) for j in range(protos.shape[0])]
+                min_dist = min(dists) if dists else 1e9
+                out.append((d, float(1.0 / max(min_dist, 1e-6))))
+        else:
+            raise ValueError(f"Unknown sim_metric: {metric}")
+
+        out.sort(key=lambda x: x[1], reverse=True)
+        return out
+
     def select_topk(
         self,
         img_emb: np.ndarray,
         top_k: int = 3,
-        temperature: float | None = None
+        temperature: float | None = None,
+        norm_topk_domains: int = 0,
+        include_domains: Optional[List[str]] = None,
     ) -> List[Tuple[str, float]]:
         """
         多原型检索 + 域级聚合版 select_topk：
@@ -128,88 +157,39 @@ class DomainOrchestrator:
             temperature = self.temperature
         temperature = max(float(temperature), 1e-6)
 
-        metric = self.sim_metric
+        dom_scores = self.score_domains(img_emb)
+        if not dom_scores:
+            return []
 
-        # ===== 余弦相似度：越大越好，top_k 原型，域级聚合 =====
-        if metric == 'cosine':
-            entries: List[Tuple[str, int, float]] = []  # (domain, proto_idx, sim)
+        score_map: Dict[str, float] = {d: float(s) for d, s in dom_scores}
 
-            for d, dom in self.domains.items():
-                protos = dom.prototypes  # [K_d, C]
-                for j in range(protos.shape[0]):
-                    s = self.cosine(img_emb, protos[j])
-                    entries.append((d, j, s))
-
-            if not entries:
-                return []
-
-            # 按相似度从大到小排序，取原型级 top_k
-            entries.sort(key=lambda x: x[2], reverse=True)
-            top_entries = entries[:max(1, top_k)]
-
-            # 对同一域聚合相似度
-            domain_scores: Dict[str, float] = {}
-            for d, j, s in top_entries:
-                domain_scores[d] = domain_scores.get(d, 0.0) + float(s)
-
-            doms = list(domain_scores.keys())
-            scores = np.array([domain_scores[d] for d in doms], dtype=np.float32)
-
-            print("[debug raw_scores]", list(zip(doms, scores)))  # ★ 额外看一下聚合前的原始分数
-
-            # softmax 激活
-            logits = scores / temperature
-            logits = logits - logits.max()
-            w = np.exp(logits)
-            w_sum = w.sum()
-            if w_sum <= 1e-8:
-                w = np.ones_like(w) / len(w)
-            else:
-                w /= w_sum
-
-            return [(name, float(weight)) for name, weight in zip(doms, w)]
-
-        # ===== 欧式距离：越小越好，top_k 原型，域级聚合 =====
-        elif metric in ('euclidean', 'l2'):
-            entries: List[Tuple[str, int, float]] = []  # (domain, proto_idx, dist)
-
-            for d, dom in self.domains.items():
-                protos = dom.prototypes  # [K_d, C]
-                for j in range(protos.shape[0]):
-                    dist = self.l2(img_emb, protos[j])
-                    entries.append((d, j, dist))
-
-            if not entries:
-                return []
-
-            # 按距离从小到大排序，取原型级 top_k
-            entries.sort(key=lambda x: x[2])
-            top_entries = entries[:max(1, top_k)]
-
-            # 用 1/d 当 proximity，再在域级聚合
-            domain_scores: Dict[str, float] = {}
-            for d, j, dist in top_entries:
-                prox = 1.0 / max(float(dist), 1e-6)
-                domain_scores[d] = domain_scores.get(d, 0.0) + prox
-
-            doms = list(domain_scores.keys())
-            scores = np.array([domain_scores[d] for d in doms], dtype=np.float32)
-
-            print("[debug raw_scores]", list(zip(doms, scores)))  # ★ 额外看一下聚合前的原始分数
-            
-            logits = scores / temperature
-            logits = logits - logits.max()
-            w = np.exp(logits)
-            w_sum = w.sum()
-            if w_sum <= 1e-8:
-                w = np.ones_like(w) / len(w)
-            else:
-                w /= w_sum
-
-            return [(name, float(weight)) for name, weight in zip(doms, w)]
-
+        n_top = int(norm_topk_domains)
+        if n_top > 0:
+            cand_set = set([d for d, _ in dom_scores[:n_top]])
+            if include_domains:
+                for d in include_domains:
+                    if d in score_map:
+                        cand_set.add(d)
+            cand = [d for d, _ in dom_scores if d in cand_set]
         else:
-            raise ValueError(f"Unknown sim_metric: {metric}")
+            cand = [d for d, _ in dom_scores]
+
+        if not cand:
+            cand = [dom_scores[0][0]]
+
+        scores = np.array([score_map[d] for d in cand], dtype=np.float32)
+        logits = scores / temperature
+        logits = logits - logits.max()
+        w = np.exp(logits)
+        w_sum = w.sum()
+        if w_sum <= 1e-8:
+            w = np.ones_like(w) / len(w)
+        else:
+            w /= w_sum
+
+        out = [(cand[i], float(w[i])) for i in range(len(cand))]
+        out.sort(key=lambda x: x[1], reverse=True)
+        return out[:max(1, int(top_k))]
 
     def _normalize_keys(self, sd: dict) -> dict:
         """将可能带域名的键（...lora_down.<Domain>.weight）规范为域无关键（...lora_down.weight）"""

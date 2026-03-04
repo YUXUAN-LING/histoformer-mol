@@ -81,6 +81,7 @@ class RunConfigFactory:
             mix_topk=int(_get(args, "mix_topk", 5)),
             single_tau=float(_get(args, "single_tau", 0.72)),
             single_margin=float(_get(args, "single_margin", 0.10)),
+            norm_topk_domains=int(_get(args, "norm_topk_domains", 0)),
         )
 
         # ---------------- Fusion ----------------

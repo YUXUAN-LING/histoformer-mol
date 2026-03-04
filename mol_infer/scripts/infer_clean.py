@@ -389,6 +389,8 @@ def build_parser():
     p.add_argument("--mix_topk", type=int, default=5)
     p.add_argument("--single_tau", type=float, default=0.72)
     p.add_argument("--single_margin", type=float, default=0.10)
+    p.add_argument("--norm_topk_domains", type=int, default=0,
+                   help="if >0, only normalize retrieval scores over top-N domains (+ local/global)")
 
     p.add_argument("--enable_lora", action="store_true", help="enable single/mix output, else only base")
     p.add_argument("--enable_fusion", action="store_true", help="enable kselect_none for mix")
@@ -546,7 +548,13 @@ def main():
         # retrieval (use image path -> PIL -> embed)
         img_pil = Image.open(lq_path).convert("RGB")
         emb = embedder.embed_image(img_pil).reshape(-1)  # [D]
-        picks = orch.select_topk(emb, top_k=args.topk, temperature=args.temperature)
+        picks = orch.select_topk(
+            emb,
+            top_k=args.topk,
+            temperature=args.temperature,
+            norm_topk_domains=int(args.norm_topk_domains),
+            include_domains=local_domains + global_domains,
+        )
 
         if args.print_full_scores:
             # raw scores
