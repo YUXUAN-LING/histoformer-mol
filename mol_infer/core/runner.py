@@ -224,6 +224,8 @@ class Runner:
                 topk=int(cfg.retrieval.topk),
                 temperature=float(cfg.retrieval.temperature),
                 return_raw_scores=bool(cfg.runtime.print_full_scores),
+                norm_topk_domains=int(cfg.routing.norm_topk_domains),
+                include_domains=self.local_domains + self.global_domains,
             )
 
             if cfg.runtime.print_full_scores and ret.raw_scores is not None:

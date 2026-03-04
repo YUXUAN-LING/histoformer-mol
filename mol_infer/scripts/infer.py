@@ -55,6 +55,8 @@ def build_parser() -> argparse.ArgumentParser:
     ap.add_argument("--mix_topk", type=int, default=5)
     ap.add_argument("--single_tau", type=float, default=0.72)
     ap.add_argument("--single_margin", type=float, default=0.10)
+    ap.add_argument("--norm_topk_domains", type=int, default=0,
+                    help="if >0, only normalize retrieval scores over top-N domains (+ local/global)")
 
     # ----------------- runtime -----------------
     ap.add_argument("--device", type=str, default="cuda")

@@ -104,6 +104,7 @@ class RoutingConfig:
     mix_topk: int = 5
     single_tau: float = 0.72
     single_margin: float = 0.10
+    norm_topk_domains: int = 0  # >0: softmax only over top-N retrieval scores (+ local/global)
 
 
 @dataclass
