@@ -58,16 +58,15 @@ class ActKSelectDyChannelController:
         self.cfg = cfg
         self.mode = "probe"  # "probe" or "apply"
         self.hooks = []
-
+        import torch.nn as nn
         # 所有“看起来像 LoRA module”的层：需要有 lora_up/lora_down dict
         self.modules: List[Tuple[str, torch.nn.Module]] = []
         for name, m in net.named_modules():
             if hasattr(m, "lora_up") and hasattr(m, "lora_down"):
-                try:
-                    if isinstance(getattr(m, "lora_up"), dict) and isinstance(getattr(m, "lora_down"), dict):
-                        self.modules.append((name, m))
-                except Exception:
-                    pass
+                lu = getattr(m, "lora_up", None)
+                ld = getattr(m, "lora_down", None)
+                if isinstance(lu, (dict, nn.ModuleDict)) and isinstance(ld, (dict, nn.ModuleDict)):
+                    self.modules.append((name, m))
 
         # probe 记录：每层 score / dy / gate 等
         self.records: Dict[str, Dict[str, Any]] = {}

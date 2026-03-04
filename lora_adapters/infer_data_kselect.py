@@ -713,7 +713,8 @@ def main():
                     y_auto = forward_padded(net, x)
 
             # forward auto
-            y_auto = forward_padded(net, x)
+            if y_auto is None:
+                y_auto = forward_padded(net, x)
 
         # ---------------- metrics ----------------
         psnr_base = ssim_base = psnr_auto = ssim_auto = None

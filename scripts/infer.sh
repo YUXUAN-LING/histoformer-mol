@@ -1058,7 +1058,7 @@ python -m lora_adapters.infer_data_kselect \
   --embedder clip --clip_model ViT-B-16 --clip_pretrained weights/clip/open_clip_pytorch_model.bin \
   --sim_metric euclidean --temperature 0.07 \
   --rank 16 --alpha 16 \
-  --single_tau 0.60 --single_margin 0.20 --mix_topk 3 \
+  --single_tau 0.70 --single_margin 0.40 --mix_topk 3 \
   --mix_mode act_kselect_dy_ch \
   --act_layer_topk 30 \
   --act_layer_tau 0.05 \
